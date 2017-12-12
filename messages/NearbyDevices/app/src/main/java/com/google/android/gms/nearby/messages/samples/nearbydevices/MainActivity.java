@@ -1,12 +1,19 @@
 package com.google.android.gms.nearby.messages.samples.nearbydevices;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SwitchCompat;
 import android.text.TextUtils;
@@ -101,12 +108,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      * The {@link Message} object used to broadcast information about the device to nearby devices.
      */
     private Message mPubMessage;
-
     /**
      * A {@link MessageListener} for processing messages from nearby devices.
      */
     private MessageListener mMessageListener;
 
+    private LocationManager mLocationManager;
     /**
      * Adapter for working with messages from nearby publishers.
      */
@@ -116,19 +123,19 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         mSubscribeSwitch = (SwitchCompat) findViewById(R.id.subscribe_switch);
         mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
 
         // Build the message that is going to be published. This contains the device name and a
         // UUID.
         mPubMessage = DeviceMessage.newNearbyMessage(getUUID(getSharedPreferences(
-                getApplicationContext().getPackageName(), Context.MODE_PRIVATE)));
+                getApplicationContext().getPackageName(), Context.MODE_PRIVATE)), getLastBestLocation());
 
         mMessageListener = new MessageListener() {
             @Override
             public void onFound(final Message message) {
                 // Called when a new message is found.
+
                 mNearbyDevicesArrayAdapter.add(
                         DeviceMessage.fromNearbyMessage(message).getMessageBody());
             }
@@ -261,6 +268,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     public void onResult(@NonNull Status status) {
                         if (status.isSuccess()) {
                             Log.i(TAG, "Subscribed successfully.");
+                            logAndShowSnackbar("We done it boyzzz");
                         } else {
                             logAndShowSnackbar("Could not subscribe, status = " + status);
                             mSubscribeSwitch.setChecked(false);
@@ -333,4 +341,37 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Snackbar.make(container, text, Snackbar.LENGTH_LONG).show();
         }
     }
+
+    /**
+     * @return the last know best location
+     */
+    public Location getLastBestLocation() {
+        Location locationGPS;
+        Location locationNet;
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationGPS = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            locationNet = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        } else {
+            locationGPS = null;
+            locationNet = null;
+        }
+
+        long GPSLocationTime = 0;
+        if (null != locationGPS) {
+            GPSLocationTime = locationGPS.getTime();
+        }
+
+        long NetLocationTime = 0;
+
+        if (null != locationNet) {
+            NetLocationTime = locationNet.getTime();
+        }
+
+        if (0 < GPSLocationTime - NetLocationTime) {
+            return locationGPS;
+        } else {
+            return locationNet;
+        }
+    }
+
 }

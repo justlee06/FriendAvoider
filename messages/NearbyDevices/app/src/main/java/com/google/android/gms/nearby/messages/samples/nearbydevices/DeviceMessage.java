@@ -1,4 +1,5 @@
 package com.google.android.gms.nearby.messages.samples.nearbydevices;
+import android.location.Location;
 import android.os.Build;
 
 import com.google.android.gms.nearby.messages.Message;
@@ -21,8 +22,8 @@ public class DeviceMessage {
     /**
      * Builds a new {@link Message} object using a unique identifier.
      */
-    public static Message newNearbyMessage(String instanceId) {
-        DeviceMessage deviceMessage = new DeviceMessage(instanceId);
+    public static Message newNearbyMessage(String instanceId, Location location) {
+        DeviceMessage deviceMessage = new DeviceMessage(instanceId, location);
         return new Message(gson.toJson(deviceMessage).getBytes(Charset.forName("UTF-8")));
     }
 
@@ -37,13 +38,24 @@ public class DeviceMessage {
                 DeviceMessage.class);
     }
 
-    private DeviceMessage(String uuid) {
+    private DeviceMessage(String uuid, Location location) {
         mUUID = uuid;
-        mMessageBody = Build.MODEL;
+        if(!(location == null))
+        {
+            mMessageBody = location.toString();
+        }
+        else {
+            mMessageBody = "sorry we had a null";
+        }
+
+
         // TODO(developer): add other fields that must be included in the Nearby Message payload.
     }
 
     protected String getMessageBody() {
-        return mMessageBody;
+        if(mMessageBody == null) {
+            return "oh no another bad error thing";
+        }
+        return mMessageBody.toString();
     }
 }
